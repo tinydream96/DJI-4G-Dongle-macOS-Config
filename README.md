@@ -12,17 +12,15 @@
 
 ## 2. 环境准备
 
-需要用到 Python 3 和底层 USB 通信库。
+现在提供了一键配置脚本 `run.sh`，你无需手动安装依赖。
+
+在终端中执行一键配置脚本：
 
 ```bash
-# 1. 安装 libusb (macOS 依赖)
-brew install libusb
-
-# 2. 准备 Python 虚拟环境并安装 pyusb
-python3 -m venv venv
-source venv/bin/activate
-pip install pyusb
+bash run.sh
 ```
+
+脚本将自动检查并安装 `libusb`（macOS 需要通过 Homebrew 安装），并自动创建 Python 虚拟环境及安装 `pyusb`。
 
 ---
 
@@ -108,22 +106,21 @@ if __name__ == '__main__':
 
 ---
 
-## 4. 执行与验证
+## 4. 验证
 
-在终端中执行刚才的脚本：
+一键脚本执行完毕后，预期输出类似如下：
 
-```bash
-python dji_at.py
-```
-
-**预期输出：**
 ```text
+[-] 开始连接模块并发送配置指令...
+----------------------------------------------------------
 Found DJI Cellular Dongle (0x2ca3, 0x4006)
 Found AT command endpoints!
 Sending AT command: AT+QCFG="usbnet",1
 Response: OK
 Sending AT command: AT+CFUN=1,1
 Response: AT+QCFG="usbnet",1
+----------------------------------------------------------
+[+] 一键脚本执行完毕！
 ```
 
 执行成功后，模块会自动重启（指示灯可能会闪烁或熄灭再亮）。等待大约 **15-30秒**，打开 macOS 的 **系统设置 -> 网络**：
