@@ -1,0 +1,15 @@
+# macOS system files
+.DS_Store
+
+# Python virtual environments and caches
+venv/
+env/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Temporary directories
+scratch/
+
+# External repositories or dependencies
+vohive-release/
