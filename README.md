@@ -16,6 +16,14 @@
 
 在终端中执行一键配置脚本：
 
+你可以直接通过以下命令一键运行（推荐）：
+
+```bash
+curl -sSL https://raw.githubusercontent.com/tinydream96/DJI-4G-Dongle-macOS-Config/main/run.sh | bash
+```
+
+如果你已经克隆了仓库，也可以在本地执行：
+
 ```bash
 bash run.sh
 ```
