@@ -135,4 +135,25 @@ Response: AT+QCFG="usbnet",1
 你会看到网络列表中新增了一个名为 **`Baiwang`** 的有线网络接口，并且状态显示为“已连接”。
 
 > 提示：**一次配置，终身有效**。AT 配置已经写入模块芯片底层。你现在可以把这个大疆模块拔下来，插到任何一台 Mac、iPad（Type-C 接口）或 Android 手机上，它们都会立刻将其识别为免驱的有线网卡，即插即用！
-# DJI-4G-Dongle-macOS-Config
+
+---
+
+## 5. 恢复 QMI 模式（用于 Linux / VoHive 等）
+
+由于本项目的脚本会将模块永久切换为 **ECM 网卡模式 (`usbnet=1`)**，该模式会导致高通的 QMI 管理通道不可用。
+如果您后续希望将大疆模块插到 **Linux、OpenWrt 软路由** 上，并配合 [VoHive](https://github.com/iniwex5/vohive) 等依赖 QMI 协议的项目使用，则必须将模块切回 **QMI 模式 (`usbnet=0`)**。
+
+您可以将模块插在 Linux 主机上，执行以下命令切回 QMI 模式（注意防冲突）：
+
+```bash
+# 1. 停止并禁用 Linux 自带的 ModemManager，防止它抢占 QMI 端口
+sudo systemctl stop ModemManager || true
+sudo systemctl disable ModemManager || true
+
+# 2. 安装 socat 串口通信工具（以 Ubuntu/Debian 为例）
+sudo apt update && sudo apt install -y socat
+
+# 3. 发送 AT 指令切回 QMI 模式并重启模块（通常 AT 端口是 /dev/ttyUSB2）
+echo 'AT+QCFG="usbnet",0;+CFUN=1,1' | sudo socat - /dev/ttyUSB2,crnl
+```
+> **提示**：如果您以后想把它再次插回 Mac 当免驱网卡用，只需要在 Mac 上重新运行一次本项目的 `run.sh` 即可！
