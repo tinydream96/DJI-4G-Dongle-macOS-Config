@@ -32,6 +32,11 @@ def find_at_endpoint(dev):
     return None, None
 
 def main():
+    import sys
+    mode = "mac"
+    if len(sys.argv) > 1:
+        mode = sys.argv[1]
+
     dev = usb.core.find(idVendor=0x2ca3, idProduct=0x4006)
     if dev is None:
         print("DJI Dongle not found.")
@@ -51,10 +56,24 @@ def main():
         
     print("Found AT command endpoints!")
     
-    commands = [
-        b'AT+QCFG="usbnet",1\r\n',
-        b'AT+CFUN=1,1\r\n'
-    ]
+    if mode == "restore":
+        print("Mode: RESTORE (Set usbnet=0 for original DJI behavior)")
+        commands = [
+            b'AT+QCFG="usbnet",0\r\n',
+            b'AT+CFUN=1,1\r\n'
+        ]
+    elif mode == "win":
+        print("Mode: WINDOWS / LINUX (Set usbnet=3 for RNDIS)")
+        commands = [
+            b'AT+QCFG="usbnet",3\r\n',
+            b'AT+CFUN=1,1\r\n'
+        ]
+    else:
+        print("Mode: MAC / IPHONE (Set usbnet=1 for ECM)")
+        commands = [
+            b'AT+QCFG="usbnet",1\r\n',
+            b'AT+CFUN=1,1\r\n'
+        ]
     
     for cmd in commands:
         print(f"Sending AT command: {cmd.decode('utf-8').strip()}")
