@@ -66,18 +66,26 @@ if ! command -v python3 > /dev/null 2>&1; then
     exit 1
 fi
 
-# 3. 准备虚拟环境
+# 3. 准备独立的工作目录和虚拟环境
+WORKDIR="/tmp/dji_4g_config"
+mkdir -p "$WORKDIR"
+cd "$WORKDIR"
+
 if [ ! -d "venv" ]; then
-    echo "[-] 正在创建 Python 虚拟环境..."
+    echo "[-] 正在创建独立的 Python 虚拟环境..."
     python3 -m venv venv
 fi
 
 # 4. 激活虚拟环境并安装依赖
 echo "[-] 正在安装必要的 Python 依赖库 (pyusb)..."
 source venv/bin/activate
-pip install -r requirements.txt --quiet
+pip install pyusb --quiet
 
-# 5. 执行核心脚本
+# 5. 下载核心脚本
+echo "[-] 正在获取最新的核心配置脚本..."
+curl -sSLO https://raw.githubusercontent.com/tinydream96/DJI-4G-Dongle-macOS-Config/main/dji_at.py
+
+# 6. 执行核心脚本
 echo "[-] 开始连接模块并发送指令..."
 echo "----------------------------------------------------------"
 python dji_at.py "$MODE"
