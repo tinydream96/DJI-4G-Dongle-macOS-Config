@@ -10,7 +10,7 @@ echo "  2. Windows / Linux 上网使用 (RNDIS模式)"
 echo "  3. 恢复官方默认模式 (供大疆无人机/设备使用)"
 echo "----------------------------------------------------------"
 
-read -p "请输入选项 [1/2/3]: " OPTION
+read -p "请输入选项 [1/2/3]: " OPTION < /dev/tty
 
 if [ "$OPTION" == "1" ]; then
     MODE="mac"
