@@ -46,15 +46,19 @@ elif [ "$OS" == "Linux" ]; then
     if ! ldconfig -p | grep libusb-1.0 > /dev/null 2>&1 && ! dpkg -l | grep libusb-1.0-0 > /dev/null 2>&1; then
         echo "[-] 未检测到 libusb，正在尝试使用 apt/yum 安装..."
         if command -v apt > /dev/null 2>&1; then
-            sudo apt update && sudo apt install -y libusb-1.0-0-dev
+            sudo apt update && sudo apt install -y libusb-1.0-0-dev python3-venv
         elif command -v yum > /dev/null 2>&1; then
-            sudo yum install -y libusbx-devel
+            sudo yum install -y libusbx-devel python3
         else
             echo "[x] 错误：无法自动安装 libusb，请手动安装 libusb-1.0 库。"
             # 继续尝试，不强制退出，以防其实已经安装但未被检测到
         fi
     else
         echo "[+] 系统依赖项 libusb 已存在。"
+        if command -v apt > /dev/null 2>&1 && ! dpkg -l | grep -q python3-venv; then
+            echo "[-] 正在补充安装 python3-venv..."
+            sudo apt update && sudo apt install -y python3-venv || true
+        fi
     fi
 else
     echo "[!] 未知操作系统 $OS，尝试跳过依赖安装继续执行..."
@@ -71,8 +75,9 @@ WORKDIR="/tmp/dji_4g_config"
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"
 
-if [ ! -d "venv" ]; then
+if [ ! -f "venv/bin/activate" ]; then
     echo "[-] 正在创建独立的 Python 虚拟环境..."
+    rm -rf venv
     python3 -m venv venv
 fi
 
