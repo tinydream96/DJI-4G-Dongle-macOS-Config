@@ -1,0 +1,105 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    name: Build on macOS
+    strategy:
+      matrix:
+        os: [macos-latest, macos-13]
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyusb pyinstaller
+
+      - name: Install libusb (Homebrew)
+        run: brew install libusb
+
+      - name: Get libusb path
+        id: get-libusb
+        run: |
+          LIBUSB_PATH=$(brew --prefix libusb)/lib/libusb-1.0.dylib
+          echo "path=$LIBUSB_PATH" >> $GITHUB_OUTPUT
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --onefile --add-binary "${{ steps.get-libusb.outputs.path }}:." --name dji_config_mac_${{ runner.arch }} dji_at.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dji_config_mac_${{ runner.arch }}
+          path: dist/dji_config_mac_${{ runner.arch }}
+
+  build-win:
+    name: Build on Windows
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyusb pyinstaller
+
+      - name: Download libusb for Windows
+        run: |
+          curl -L -o libusb.7z https://github.com/libusb/libusb/releases/download/v1.0.26/libusb-1.0.26-binaries.7z
+          7z x libusb.7z -olibusb_bin
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --onefile --add-binary "libusb_bin\VS2019\MS64\dll\libusb-1.0.dll;." --name dji_config_win dji_at.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dji_config_win.exe
+          path: dist/dji_config_win.exe
+
+  release:
+    name: Create Release
+    needs: [build-mac, build-win]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/dji_config_mac_ARM64
+            artifacts/dji_config_mac_X64
+            artifacts/dji_config_win.exe
+          draft: false
+          prerelease: false
+          generate_release_notes: true

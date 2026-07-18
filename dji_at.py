@@ -1,6 +1,25 @@
 import usb.core
 import usb.util
 import time
+import sys
+import os
+import usb.backend.libusb1
+
+def get_bundled_backend():
+    if not getattr(sys, 'frozen', False):
+        return None
+    
+    base_path = sys._MEIPASS
+    if sys.platform == 'darwin':
+        lib_path = os.path.join(base_path, 'libusb-1.0.dylib')
+    elif sys.platform == 'win32':
+        lib_path = os.path.join(base_path, 'libusb-1.0.dll')
+    else:
+        return None
+        
+    if os.path.exists(lib_path):
+        return usb.backend.libusb1.get_backend(find_library=lambda x: lib_path)
+    return None
 
 def find_at_endpoint(dev):
     for cfg in dev:
@@ -32,12 +51,12 @@ def find_at_endpoint(dev):
     return None, None
 
 def main():
-    import sys
     mode = "mac"
     if len(sys.argv) > 1:
         mode = sys.argv[1]
 
-    dev = usb.core.find(idVendor=0x2ca3, idProduct=0x4006)
+    backend = get_bundled_backend()
+    dev = usb.core.find(idVendor=0x2ca3, idProduct=0x4006, backend=backend)
     if dev is None:
         print("DJI Dongle not found.")
         return
