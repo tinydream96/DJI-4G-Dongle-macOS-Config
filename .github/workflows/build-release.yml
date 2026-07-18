@@ -11,7 +11,7 @@ jobs:
     name: Build on macOS
     strategy:
       matrix:
-        os: [macos-latest, macos-13]
+        os: [macos-latest, macos-12]
     runs-on: ${{ matrix.os }}
     
     steps:
