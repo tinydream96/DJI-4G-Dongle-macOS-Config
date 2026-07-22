@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJI 4G Dongle macOS 免驱刷机工具</title>
+    <style>
+        /* CSS reset & variables */
+        :root {
+            --bg-color: #000000;
+            --card-bg: rgba(30, 30, 30, 0.6);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --accent: #0a84ff;
+            --accent-hover: #007aff;
+            --success: #32d74b;
+            --error: #ff453a;
+            --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Premium gradient background */
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(10, 132, 255, 0.15), transparent 35%),
+                radial-gradient(circle at 85% 30%, rgba(50, 215, 75, 0.1), transparent 35%);
+            background-attachment: fixed;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 520px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            z-index: 10;
+        }
+
+        .header {
+            text-align: center;
+            animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.75rem;
+            background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            max-width: 90%;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+            animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .status-area {
+            text-align: center;
+        }
+
+        .status-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(10, 132, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem auto;
+            color: var(--accent);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.2);
+        }
+        
+        .status-icon svg {
+            width: 36px;
+            height: 36px;
+            stroke-width: 1.5;
+        }
+
+        .status-icon.success {
+            background: rgba(50, 215, 75, 0.1);
+            color: var(--success);
+            box-shadow: 0 0 0 1px rgba(50, 215, 75, 0.2);
+            transform: scale(1.05);
+        }
+
+        .status-icon.error {
+            background: rgba(255, 69, 58, 0.1);
+            color: var(--error);
+            box-shadow: 0 0 0 1px rgba(255, 69, 58, 0.2);
+            transform: scale(1.05);
+        }
+
+        .status-text {
+            font-size: 1.15rem;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 1.1rem;
+            border-radius: 14px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 14px rgba(10, 132, 255, 0.4);
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 0.5rem;
+        }
+
+        .mode-option {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1rem 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .mode-option input {
+            display: none;
+        }
+
+        .mode-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .mode-option.active {
+            background: rgba(10, 132, 255, 0.15);
+            border-color: var(--accent);
+        }
+
+        .mode-option.active::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: -1px; right: -1px; bottom: -1px;
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            pointer-events: none;
+        }
+
+        .mode-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .mode-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(10, 132, 255, 0.5);
+        }
+        
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .console {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1rem;
+            height: 180px;
+            overflow-y: auto;
+            font-family: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+            font-size: 0.85rem;
+            color: #e4e4e7;
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        .console div {
+            margin-bottom: 6px;
+            word-break: break-all;
+        }
+
+        .console div:last-child {
+            margin-bottom: 0;
+        }
+
+        .log-time {
+            color: #71717a;
+            margin-right: 8px;
+            user-select: none;
+        }
+
+        .log-tx { color: #38bdf8; }
+        .log-rx { color: #facc15; }
+        .log-success { color: var(--success); }
+        .log-error { color: var(--error); }
+
+        .browser-warning {
+            display: none;
+            background: rgba(255, 69, 58, 0.1);
+            border: 1px solid rgba(255, 69, 58, 0.3);
+            color: #ff453a;
+            padding: 1rem;
+            border-radius: 14px;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes fade-in-up {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.5); }
+            70% { box-shadow: 0 0 0 15px rgba(10, 132, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0); }
+        }
+        
+        .pulsing {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Custom scrollbar for console */
+        .console::-webkit-scrollbar {
+            width: 8px;
+        }
+        .console::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .console::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+        .console::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>在线刷机工具</h1>
+        <p>将大疆第一代 4G 传图模块一键切换为免驱网卡模式。无需配置环境，即插即用。</p>
+    </div>
+
+    <div class="browser-warning" id="browser-warning">
+        当前浏览器不支持 WebUSB API。<br>请使用 <b>Google Chrome</b> 或 <b>Microsoft Edge</b>。
+    </div>
+
+    <div class="card">
+        <div class="status-area">
+            <div class="status-icon" id="status-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+            </div>
+            <div class="status-text" id="status-text">准备就绪</div>
+        </div>
+
+        <div class="mode-selector">
+            <label class="mode-option active">
+                <input type="radio" name="mode" value="1" checked>
+                <div class="mode-title">macOS / iPhone</div>
+                <div class="mode-desc">ECM 免驱模式</div>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="mode" value="3">
+                <div class="mode-title">Windows / Linux</div>
+                <div class="mode-desc">RNDIS 模式</div>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="mode" value="0">
+                <div class="mode-title">恢复原厂</div>
+                <div class="mode-desc">QMI 默认模式</div>
+            </label>
+        </div>
+
+        <button id="connect-btn" class="pulsing">连接模块并执行</button>
+
+        <div class="console" id="console">
+            <div><span class="log-time">00:00:00</span> <span style="color: #a1a1aa">请将大疆 4G 模块插入 Mac，然后点击上方按钮。</span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const btn = document.getElementById('connect-btn');
+    const consoleEl = document.getElementById('console');
+    const statusText = document.getElementById('status-text');
+    const statusIcon = document.getElementById('status-icon');
+    const warningEl = document.getElementById('browser-warning');
+    const modeOptions = document.querySelectorAll('.mode-option');
+
+    // Handle mode selection UI
+    modeOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            modeOptions.forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
+        });
+    });
+
+    // SVG icons
+    const iconUsb = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25z" /></svg>`;
+    const iconSuccess = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+    const iconError = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
+
+    function getTimestamp() {
+        const now = new Date();
+        return now.toTimeString().split(' ')[0];
+    }
+
+    function log(msg, type = '') {
+        let spanClass = '';
+        if (type === 'tx') spanClass = 'log-tx';
+        else if (type === 'rx') spanClass = 'log-rx';
+        else if (type === 'success') spanClass = 'log-success';
+        else if (type === 'error') spanClass = 'log-error';
+
+        const timeSpan = `<span class="log-time">${getTimestamp()}</span>`;
+        const textSpan = `<span class="${spanClass}">${msg}</span>`;
+        
+        consoleEl.innerHTML += `<div>${timeSpan} ${textSpan}</div>`;
+        // Scroll to bottom safely
+        setTimeout(() => {
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }, 10);
+    }
+
+    function updateStatus(text, state) {
+        statusText.innerText = text;
+        statusIcon.className = 'status-icon ' + state;
+        if (state === 'success') {
+            statusIcon.innerHTML = iconSuccess;
+            btn.classList.remove('pulsing');
+        } else if (state === 'error') {
+            statusIcon.innerHTML = iconError;
+            btn.classList.remove('pulsing');
+        } else {
+            statusIcon.innerHTML = iconUsb;
+        }
+    }
+
+    // Check WebUSB API support
+    if (!navigator.usb) {
+        warningEl.style.display = 'block';
+        btn.disabled = true;
+        btn.innerText = '浏览器不支持';
+        btn.classList.remove('pulsing');
+        log("系统检测：当前浏览器不支持 WebUSB API，请换用 Chrome 或 Edge。", "error");
+    }
+
+    btn.addEventListener('click', async () => {
+        try {
+            const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+            let modeName = "ECM 免驱网卡模式 (usbnet=1)";
+            if (selectedMode === "3") modeName = "RNDIS 网卡模式 (usbnet=3)";
+            if (selectedMode === "0") modeName = "原厂 QMI 模式 (usbnet=0)";
+
+            btn.disabled = true;
+            btn.innerText = "处理中...";
+            btn.classList.remove('pulsing');
+            updateStatus("正在连接设备...", "");
+            consoleEl.innerHTML = ''; // clear console
+            log(`已选择刷入模式：${modeName}`);
+            log("开始请求 USB 设备访问权限...");
+
+            // 请求大疆模块设备 (0x2ca3, 0x4006)
+            const device = await navigator.usb.requestDevice({
+                filters: [{ vendorId: 0x2ca3, productId: 0x4006 }]
+            });
+
+            log(`已选择设备: ${device.productName || 'DJI 4G Dongle'}`);
+            
+            await device.open();
+            log("设备通信信道已打开");
+
+            if (device.configuration === null) {
+                await device.selectConfiguration(1);
+                log("已选择 USB 配置 1");
+            }
+
+            // 遍历寻找具备 In 和 Out 的 Bulk 端点，并测试是否响应 AT 指令
+            let atInterfaceNumber = -1;
+            let inEndpoint = null;
+            let outEndpoint = null;
+
+            log("开始探测 AT 指令端口...");
+            
+            for (const config of device.configurations) {
+                for (const iface of config.interfaces) {
+                    for (const alt of iface.alternates) {
+                        let outEp = null;
+                        let inEp = null;
+                        for (const ep of alt.endpoints) {
+                            if (ep.direction === 'out' && ep.type === 'bulk') outEp = ep;
+                            if (ep.direction === 'in' && ep.type === 'bulk') inEp = ep;
+                        }
+                        
+                        if (outEp && inEp) {
+                            try {
+                                log(`测试 Interface ${iface.interfaceNumber}...`);
+                                await device.claimInterface(iface.interfaceNumber);
+                                
+                                const encoder = new TextEncoder();
+                                
+                                // 为 transferOut 设置超时，防止在某些无响应端点死锁
+                                const writePromise = device.transferOut(outEp.endpointNumber, encoder.encode("AT\r\n"));
+                                const writeTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Write Timeout")), 200));
+                                await Promise.race([writePromise, writeTimeout]);
+                                
+                                // 为 transferIn 设置 300ms 超时
+                                const readPromise = device.transferIn(inEp.endpointNumber, 64);
+                                const readTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Read Timeout")), 300));
+                                
+                                try {
+                                    const result = await Promise.race([readPromise, readTimeout]);
+                                    if (result && result.data) {
+                                        const decoder = new TextDecoder();
+                                        const text = decoder.decode(result.data);
+                                        if (text.includes("OK") || text.includes("AT")) {
+                                            atInterfaceNumber = iface.interfaceNumber;
+                                            outEndpoint = outEp;
+                                            inEndpoint = inEp;
+                                            log(`✅ 成功锁定 AT 端口 (Interface: ${atInterfaceNumber})`);
+                                            break;
+                                        }
+                                    }
+                                } catch (e) {
+                                    log(`Interface ${iface.interfaceNumber} 读取无响应，继续探测...`, "error");
+                                }
+                            } catch (e) {
+                                log(`Interface ${iface.interfaceNumber} 测试失败，继续探测...`, "error");
+                            }
+                        }
+                    }
+                    if (atInterfaceNumber !== -1) break;
+                }
+                if (atInterfaceNumber !== -1) break;
+            }
+
+            if (atInterfaceNumber === -1) {
+                throw new Error("遍历所有端口，无法找到响应 AT 指令的端口。");
+            }
+
+            updateStatus("正在刷入配置...", "");
+
+            // 核心 AT 指令发送与读取逻辑
+            async function sendAT(cmd) {
+                const encoder = new TextEncoder();
+                log(`[发送] ${cmd.trim()}`, "tx");
+                
+                try {
+                    const writePromise = device.transferOut(outEndpoint.endpointNumber, encoder.encode(cmd));
+                    const writeTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Write Timeout")), 500));
+                    await Promise.race([writePromise, writeTimeout]);
+                } catch (e) {
+                    log(`[发送超时] 指令发送失败`, "error");
+                    return "";
+                }
+                
+                let responseStr = "";
+                // 尝试多次读取，确保读出完整返回
+                let attempts = 0;
+                while (attempts < 5) {
+                    try {
+                        const readPromise = device.transferIn(inEndpoint.endpointNumber, 64);
+                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 200));
+                        const result = await Promise.race([readPromise, timeoutPromise]);
+                        
+                        if (result && result.data) {
+                            const decoder = new TextDecoder();
+                            const text = decoder.decode(result.data);
+                            responseStr += text;
+                            if (responseStr.includes("OK") || responseStr.includes("ERROR")) {
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        break; 
+                    }
+                    attempts++;
+                    await new Promise(r => setTimeout(r, 50));
+                }
+
+                if (responseStr.trim()) {
+                    // 美化输出多行响应
+                    const cleaned = responseStr.trim().replace(/\r\n/g, ' ｜ ');
+                    log(`[接收] ${cleaned}`, "rx");
+                }
+                return responseStr;
+            }
+
+            // ---- 执行 AT 指令序列 ----
+            log("测试设备通信连通性...");
+            await sendAT("AT\r\n");
+            await new Promise(r => setTimeout(r, 200));
+
+            log(`写入底层配置: ${modeName}...`);
+            await sendAT(`AT+QCFG="usbnet",${selectedMode}\r\n`);
+            await new Promise(r => setTimeout(r, 200));
+
+            log("发送设备软重启指令...");
+            await sendAT('AT+CFUN=1,1\r\n');
+
+            updateStatus("执行成功！", "success");
+            btn.innerText = "完成";
+            log("🎉 模块配置已永久写入底层芯片！", "success");
+            log("说明：设备即将自动重启（指示灯可能会闪烁）。");
+            
+            if (selectedMode === "1") {
+                log("请等待 15-30 秒后，打开 macOS 的【系统设置 -> 网络】，将会自动出现名为【Baiwang】的有线网卡，即插即用！", "success");
+            } else if (selectedMode === "3") {
+                log("请等待 15-30 秒后，在 Windows 的网络连接中将会出现新的 RNDIS 本地连接。", "success");
+            } else {
+                log("模块已恢复为原厂默认的 QMI 模式。如果在 Linux 下使用请确保已安装相应驱动。", "success");
+            }
+
+            try { await device.close(); } catch(e) {}
+
+        } catch (error) {
+            updateStatus("刷机失败", "error");
+            btn.disabled = false;
+            btn.innerText = "重新尝试";
+            if (error.message.includes("No device selected")) {
+                log("已取消：您没有在弹窗中选择任何设备。", "error");
+            } else if (error.message.includes("Access denied")) {
+                log("权限拒绝：无法接管 USB 端口。如果是 Linux 系统请检查 udev 权限。", "error");
+            } else {
+                log(`发生异常错误: ${error.message}`, "error");
+            }
+        }
+    });
+</script>
+</body>
+</html>
