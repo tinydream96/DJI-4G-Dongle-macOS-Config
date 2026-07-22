@@ -268,6 +268,30 @@
             backdrop-filter: blur(10px);
         }
 
+        .windows-guide {
+            display: none;
+            background: rgba(10, 132, 255, 0.1);
+            border: 1px solid rgba(10, 132, 255, 0.3);
+            padding: 1.2rem;
+            border-radius: 14px;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.5s ease;
+        }
+
+        .windows-guide ol {
+            margin-top: 12px;
+            margin-left: 20px;
+            color: #e4e4e7;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .windows-guide li {
+            margin-bottom: 6px;
+        }
+
         @keyframes fade-in-up {
             0% { opacity: 0; transform: translateY(20px); }
             100% { opacity: 1; transform: translateY(0); }
@@ -330,6 +354,21 @@
         </div>
     </div>
 
+    <div class="windows-guide" id="windows-guide">
+        <div style="font-weight:600; color:var(--accent); margin-bottom:8px; font-size:1.05rem;">🪟 Windows 系统刷机必读</div>
+        由于 Windows 系统安全限制，网页直接控制 USB 需要 <b>WinUSB</b> 驱动。<br>
+        如果您连接时提示 "Access denied"（权限拒绝），请先执行以下操作：
+        <ol>
+            <li>下载并打开 <a href="https://zadig.akeo.ie/" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">Zadig 工具</a>。</li>
+            <li>在 Zadig 菜单栏点击 <b>Options -> List All Devices</b>。</li>
+            <li>在下拉列表中找到并选中大疆模块（请务必选择带有 <b>(Interface 3)</b> 的选项）。<br>
+                <img src="./images/zadig.png" alt="Zadig 操作示意图" style="max-width: 100%; border-radius: 8px; margin-top: 10px; margin-bottom: 4px; border: 1px solid rgba(255,255,255,0.1);">
+            </li>
+            <li>将目标驱动 (Target Driver) 选择为 <b>WinUSB</b>，点击 <b>Replace Driver</b>（或 <b>Install Driver</b>）。</li>
+            <li>完成后即可点击下方按钮连接（刷机完成后模块自动重启，无需还原驱动）。</li>
+        </ol>
+    </div>
+
     <div class="card">
         <div class="status-area">
             <div class="status-icon" id="status-icon">
@@ -373,6 +412,9 @@
     const statusIcon = document.getElementById('status-icon');
     const warningEl = document.getElementById('browser-warning');
     const modeOptions = document.querySelectorAll('.mode-option');
+
+    const windowsGuideEl = document.getElementById('windows-guide');
+    const isWindows = navigator.userAgent.toLowerCase().includes('windows');
 
     // Handle mode selection UI
     modeOptions.forEach(option => {
@@ -430,6 +472,8 @@
         btn.innerText = '浏览器不支持';
         btn.classList.remove('pulsing');
         log("系统检测：当前浏览器不支持 WebUSB API，请换用 Chrome 或 Edge。", "error");
+    } else if (isWindows) {
+        windowsGuideEl.style.display = 'block';
     }
 
     btn.addEventListener('click', async () => {
@@ -481,19 +525,31 @@
                         
                         if (outEp && inEp) {
                             try {
-                                log(`测试 Interface ${iface.interfaceNumber}...`);
-                                await device.claimInterface(iface.interfaceNumber);
-                                
+                                try {
+                                    log(`测试 Interface ${iface.interfaceNumber}...`);
+                                    
+                                    const claimPromise = device.claimInterface(iface.interfaceNumber);
+                                    const claimTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Claim Timeout")), 1000));
+                                    await Promise.race([claimPromise, claimTimeout]);
+                                    
+                                } catch (e) {
+                                    log(`Interface ${iface.interfaceNumber} 占用或超时，跳过...`, "error");
+                                    continue; // 跳过此接口
+                                }
+                                                                
                                 const encoder = new TextEncoder();
                                 
                                 // 为 transferOut 设置超时，防止在某些无响应端点死锁
                                 const writePromise = device.transferOut(outEp.endpointNumber, encoder.encode("AT\r\n"));
-                                const writeTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Write Timeout")), 200));
+                                const writeTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Write Timeout")), 500));
                                 await Promise.race([writePromise, writeTimeout]);
                                 
-                                // 为 transferIn 设置 300ms 超时
+                                // 挂起 100ms 等待模块响应
+                                await new Promise(r => setTimeout(r, 100));
+                                
+                                // 为 transferIn 设置 1000ms 超时
                                 const readPromise = device.transferIn(inEp.endpointNumber, 64);
-                                const readTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Read Timeout")), 300));
+                                const readTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Read Timeout")), 1000));
                                 
                                 try {
                                     const result = await Promise.race([readPromise, readTimeout]);
@@ -607,7 +663,17 @@
             if (error.message.includes("No device selected")) {
                 log("已取消：您没有在弹窗中选择任何设备。", "error");
             } else if (error.message.includes("Access denied")) {
-                log("权限拒绝：无法接管 USB 端口。如果是 Linux 系统请检查 udev 权限。", "error");
+                if (isWindows) {
+                    log("权限拒绝：请务必按照上方的【Windows 系统刷机必读】使用 Zadig 工具替换 WinUSB 驱动后再试！", "error");
+                    windowsGuideEl.style.borderColor = "var(--error)";
+                    windowsGuideEl.style.boxShadow = "0 0 15px rgba(255, 69, 58, 0.4)";
+                    setTimeout(() => {
+                        windowsGuideEl.style.borderColor = "rgba(10, 132, 255, 0.3)";
+                        windowsGuideEl.style.boxShadow = "none";
+                    }, 3000);
+                } else {
+                    log("权限拒绝：无法接管 USB 端口。如果是 Linux 系统请检查 udev 权限。", "error");
+                }
             } else {
                 log(`发生异常错误: ${error.message}`, "error");
             }
