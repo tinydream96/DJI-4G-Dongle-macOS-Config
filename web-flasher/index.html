@@ -297,6 +297,20 @@
         .console::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.3);
         }
+        .download-link {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 6px 12px;
+            border-radius: 6px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+        .download-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -304,11 +318,16 @@
 <div class="container">
     <div class="header">
         <h1>在线刷机工具</h1>
-        <p>将大疆第一代 4G 传图模块一键切换为免驱网卡模式。无需配置环境，即插即用。</p>
+        <p class="subtitle">将大疆第一代 4G 传图模块一键切换为免驱网卡模式。无需配置环境，即插即用。</p>
     </div>
 
     <div class="browser-warning" id="browser-warning">
-        当前浏览器不支持 WebUSB API。<br>请使用 <b>Google Chrome</b> 或 <b>Microsoft Edge</b>。
+        ⚠️ 当前浏览器（如 Safari/Firefox）不支持网页直接控制 USB 设备。<br><br>
+        请使用 <b>Google Chrome</b> 或 <b>Microsoft Edge</b> 浏览器访问本页面。<br>
+        <div style="margin-top: 12px; display: flex; gap: 10px; justify-content: center;">
+            <a href="https://www.google.cn/chrome/" target="_blank" class="download-link">下载 Chrome (国内直连)</a>
+            <a href="https://www.microsoft.com/zh-cn/edge" target="_blank" class="download-link">下载 Microsoft Edge</a>
+        </div>
     </div>
 
     <div class="card">
